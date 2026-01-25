@@ -1,3 +1,6 @@
+#ifndef LEXER_H
+#define LEXER_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -180,33 +183,6 @@ Token next_token(Lexer *l)
     exit(1);
 }
 
-int main(void)
-{
-    FILE *fp = fopen("input.c", "r");
+#endif
 
-    fseek(fp, 0, SEEK_END);
-    size_t size = ftell(fp);
-
-    rewind(fp);
-
-    char *src = malloc(size + 1);
-    fread(src, 1, size, fp);
-    src[size] = '\0';
-
-    Lexer lex = {
-        .src = src,
-        .pos = 0,
-        .line = 1,
-        .col = 1
-    };
-
-    for (;;) {
-        Token t = next_token(&lex);
-        printf("%s at %d:%d\n", token_kind_name(t.kind), t.line, t.column);
-        if (t.kind == TOK_EOF)
-            break;
-    }
-
-    return 0;
-}
 
