@@ -6,12 +6,22 @@
 
 void gen_expr(Expr *e)
 {
-    if (e->kind == EXPR_INT) {
+    switch (e->kind) {
+
+    case EXPR_INT:
         printf("    mov eax, %d\n", e->int_value);
         return;
-    }
 
-    if (e->kind == EXPR_BINARY) {
+    case EXPR_VAR:
+        printf("    mov eax, DWORD PTR [rbp-%d]\n", e->var->offset);
+        return;
+
+    case EXPR_ASSIGN:
+        gen_expr(e->binary.right);
+        printf("    mov DWORD PTR [rbp-%d], eax\n", e->var->offset);
+        return;
+
+    case EXPR_BINARY:
         gen_expr(e->binary.left);
         printf("    push rax\n");
 
@@ -22,39 +32,52 @@ void gen_expr(Expr *e)
         switch (e->binary.op) {
         case TOK_PLUS:
             printf("    add eax, ebx\n");
-            break;
+            return;
         case TOK_MINUS:
             printf("    sub eax, ebx\n");
-            break;
+            return;
         case TOK_MUL:
             printf("    imul eax, ebx\n");
-            break;
+            return;
         case TOK_DIV:
             printf("    cdq\n");
             printf("    idiv ebx\n");
-            break;
+            return;
         }
     }
 }
 
 void gen_stmt(Stmt *s)
 {
-    if (s->kind == STMT_RETURN) {
+    switch (s->kind) {
+
+    case STMT_DECL:
+        gen_expr(s->decl.init);
+        printf("  mov DWORD PTR [rbp-%d], eax\n", s->decl.var->offset);
+        return;
+
+    case STMT_RETURN:
         gen_expr(s->expr);
+        return;
     }
 }
 
 void gen_function(Function *fn)
 {
+    assign_stack(fn);
+
     printf(".globl %s\n", fn->name);
     printf("%s:\n", fn->name);
-    printf("    push rbp\n");
-    printf("    mov rbp, rsp\n");
+    printf("  push rbp\n");
+    printf("  mov rbp, rsp\n");
+    printf("  sub rsp, %d\n", fn->stack_size);
 
-    gen_stmt(fn->body);
+    for (Stmt *s = fn->body; s; s = s->next)
+        gen_stmt(s);
 
-    printf("    pop rbp\n");
-    printf("    ret\n");
+    printf("  leave\n");
+    printf("  ret\n");
 }
+
 
 #endif
